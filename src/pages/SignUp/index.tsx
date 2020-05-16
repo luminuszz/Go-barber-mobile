@@ -5,14 +5,23 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Form } from '@unform/mobile';
 import { FormHandles, SubmitHandler } from '@unform/core';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
+import {
+  SignUpRequestDTO,
+  signUpValidate,
+  yuIstance,
+} from '../../validators/user/userSignUpValidate';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import logoImg from '../../assets/logo.png';
+import api from '../../services/apiClient';
+import getValidationsErrors from '../../utils/getValidationsErrors';
 import {
   Container,
   Title,
@@ -23,10 +32,35 @@ import {
 const SignUp: React.FC = () => {
   const navigation = useNavigation();
   const formRef = useRef<FormHandles>(null);
+  const inputEmailRef = useRef<TextInput>(null);
+  const InputPasswordlRef = useRef<TextInput>(null);
 
-  const handleSignUp: SubmitHandler = useCallback(data => {
-    console.log(data);
-  }, []);
+  const handleSignUp: SubmitHandler<SignUpRequestDTO> = useCallback(
+    async data => {
+      try {
+        await signUpValidate.validate(data, { abortEarly: false });
+        console.log(data);
+        const response = await api.post('/users', data);
+
+        navigation.navigate('SignIn');
+      } catch (err) {
+        if (err instanceof yuIstance) {
+          const errors = getValidationsErrors(err);
+          formRef.current?.setErrors(errors);
+
+          Alert.alert('Opa, erros no cadastro:');
+
+          return;
+        }
+        console.log(err);
+        Alert.alert(
+          'Erro no cadastro',
+          'Verifique suas credências e tente novamente',
+        );
+      }
+    },
+    [],
+  );
 
   return (
     <>
@@ -45,9 +79,35 @@ const SignUp: React.FC = () => {
               <Title>Crie sua conta</Title>
             </View>
             <Form onSubmit={handleSignUp} ref={formRef}>
-              <Input name="name" icon="user" placeholder="Nome" />
-              <Input name="email" icon="mail" placeholder="E-mail" />
-              <Input name="password" icon="lock" placeholder="Senha" />
+              <Input
+                autoCapitalize="words"
+                name="name"
+                icon="user"
+                placeholder="Nome"
+                returnKeyType="next"
+                onSubmitEditing={() => inputEmailRef.current?.focus()}
+              />
+              <Input
+                ref={inputEmailRef}
+                keyboardType="email-address"
+                autoCorrect={false}
+                autoCapitalize="none"
+                name="email"
+                icon="mail"
+                placeholder="E-mail"
+                returnKeyType="next"
+                onSubmitEditing={() => InputPasswordlRef.current?.focus()}
+              />
+              <Input
+                ref={InputPasswordlRef}
+                secureTextEntry
+                name="password"
+                icon="lock"
+                placeholder="Senha"
+                textContentType="newPassword"
+                returnKeyType="send"
+                onSubmitEditing={() => formRef.current?.submitForm()}
+              />
 
               <Button
                 onPress={() => {

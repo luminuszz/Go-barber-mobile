@@ -6,14 +6,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useNavigation } from '@react-navigation/native';
 import { Form } from '@unform/mobile';
 import { FormHandles, SubmitHandler } from '@unform/core';
+import {
+  SignInRequestDTO,
+  signInValidate,
+  yuIstance,
+} from '../../validators/user/userSignInValidate';
+import getValidationsErrors from '../../utils/getValidationsErrors';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import logoImg from '../../assets/logo.png';
+import { useAuth } from '../../hooks/AuthContext';
 import {
   Container,
   Title,
@@ -27,11 +35,33 @@ const SignIn: React.FC = () => {
   const navigation = useNavigation();
   const formRef = useRef<FormHandles>(null);
   const passwordInputRef = useRef<TextInput>(null);
+  const { singIn, user } = useAuth();
 
-  const handleSignIn: SubmitHandler = useCallback(data => {
-    console.log(data);
-  }, []);
+  const handleSignIn: SubmitHandler<SignInRequestDTO> = useCallback(
+    async data => {
+      try {
+        await signInValidate.validate(data, { abortEarly: false });
 
+        await singIn(data);
+
+        Alert.alert('Sucesso');
+      } catch (err) {
+        if (err instanceof yuIstance) {
+          const errors = getValidationsErrors(err);
+          formRef.current?.setErrors(errors);
+
+          Alert.alert('Opa, erros no cadastro:');
+
+          return;
+        }
+        Alert.alert(
+          'Erro no login',
+          'Verifique suas credências e tente novamente',
+        );
+      }
+    },
+    [singIn],
+  );
   return (
     <>
       <KeyboardAvoidingView
@@ -82,7 +112,11 @@ const SignIn: React.FC = () => {
               </Button>
             </Form>
 
-            <ForgotPassword onPress={() => {}}>
+            <ForgotPassword
+              onPress={() => {
+                console.log('teste');
+              }}
+            >
               <ForgotPasswordText>Esqueci minha senha</ForgotPasswordText>
             </ForgotPassword>
           </Container>
